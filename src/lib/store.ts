@@ -1,4 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export type TransactionType = "income" | "expense";
 
@@ -23,59 +25,132 @@ export const DEFAULT_CATEGORIES = {
   income: ["Salary", "Freelance", "Investment", "Gift", "Other"],
 };
 
-const DEMO_TRANSACTIONS: Transaction[] = [
-  { id: "1", amount: 5000, type: "income", category: "Salary", description: "Monthly salary", date: "2026-04-01" },
-  { id: "2", amount: 45, type: "expense", category: "Food", description: "Groceries", date: "2026-04-02" },
-  { id: "3", amount: 120, type: "expense", category: "Bills", description: "Electricity bill", date: "2026-04-03" },
-  { id: "4", amount: 30, type: "expense", category: "Travel", description: "Uber ride", date: "2026-04-05" },
-  { id: "5", amount: 200, type: "expense", category: "Shopping", description: "New shoes", date: "2026-04-07" },
-  { id: "6", amount: 500, type: "income", category: "Freelance", description: "Web project", date: "2026-04-08" },
-  { id: "7", amount: 15, type: "expense", category: "Entertainment", description: "Netflix", date: "2026-04-10" },
-  { id: "8", amount: 80, type: "expense", category: "Food", description: "Restaurant dinner", date: "2026-04-12" },
-  { id: "9", amount: 60, type: "expense", category: "Health", description: "Pharmacy", date: "2026-04-14" },
-  { id: "10", amount: 250, type: "expense", category: "Education", description: "Online course", date: "2026-04-15" },
-];
-
-const DEMO_BUDGETS: Budget[] = [
-  { id: "b1", category: "Food", limit: 300, month: "2026-04" },
-  { id: "b2", category: "Travel", limit: 200, month: "2026-04" },
-  { id: "b3", category: "Entertainment", limit: 100, month: "2026-04" },
-];
-
 export function useTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>(DEMO_TRANSACTIONS);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addTransaction = useCallback((t: Omit<Transaction, "id">) => {
-    setTransactions((prev) => [...prev, { ...t, id: crypto.randomUUID() }]);
-  }, []);
+  const fetchTransactions = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("transactions")
+      .select("id, amount, type, category, description, date")
+      .order("date", { ascending: false });
+    if (data) {
+      setTransactions(
+        data.map((t) => ({
+          ...t,
+          type: t.type as TransactionType,
+          amount: Number(t.amount),
+        }))
+      );
+    }
+    setLoading(false);
+  }, [user]);
 
-  const updateTransaction = useCallback((id: string, t: Partial<Transaction>) => {
-    setTransactions((prev) => prev.map((tx) => (tx.id === id ? { ...tx, ...t } : tx)));
-  }, []);
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
-  const deleteTransaction = useCallback((id: string) => {
-    setTransactions((prev) => prev.filter((tx) => tx.id !== id));
-  }, []);
+  const addTransaction = useCallback(
+    async (t: Omit<Transaction, "id">) => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("transactions")
+        .insert({ ...t, user_id: user.id })
+        .select("id, amount, type, category, description, date")
+        .single();
+      if (data && !error) {
+        setTransactions((prev) => [
+          { ...data, type: data.type as TransactionType, amount: Number(data.amount) },
+          ...prev,
+        ]);
+      }
+    },
+    [user]
+  );
 
-  return { transactions, addTransaction, updateTransaction, deleteTransaction };
+  const updateTransaction = useCallback(
+    async (id: string, t: Partial<Transaction>) => {
+      if (!user) return;
+      const { error } = await supabase.from("transactions").update(t).eq("id", id);
+      if (!error) {
+        setTransactions((prev) =>
+          prev.map((tx) => (tx.id === id ? { ...tx, ...t } : tx))
+        );
+      }
+    },
+    [user]
+  );
+
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      const { error } = await supabase.from("transactions").delete().eq("id", id);
+      if (!error) {
+        setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+      }
+    },
+    [user]
+  );
+
+  return { transactions, loading, addTransaction, updateTransaction, deleteTransaction };
 }
 
 export function useBudgets() {
-  const [budgets, setBudgets] = useState<Budget[]>(DEMO_BUDGETS);
+  const { user } = useAuth();
+  const [budgets, setBudgets] = useState<Budget[]>([]);
 
-  const addBudget = useCallback((b: Omit<Budget, "id">) => {
-    setBudgets((prev) => [...prev, { ...b, id: crypto.randomUUID() }]);
-  }, []);
+  const fetchBudgets = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("budgets")
+      .select("id, category, limit, month")
+      .order("created_at", { ascending: false });
+    if (data) {
+      setBudgets(data.map((b) => ({ ...b, limit: Number(b.limit) })));
+    }
+  }, [user]);
 
-  const deleteBudget = useCallback((id: string) => {
-    setBudgets((prev) => prev.filter((b) => b.id !== id));
-  }, []);
+  useEffect(() => {
+    fetchBudgets();
+  }, [fetchBudgets]);
+
+  const addBudget = useCallback(
+    async (b: Omit<Budget, "id">) => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("budgets")
+        .insert({ ...b, user_id: user.id })
+        .select("id, category, limit, month")
+        .single();
+      if (data && !error) {
+        setBudgets((prev) => [{ ...data, limit: Number(data.limit) }, ...prev]);
+      }
+    },
+    [user]
+  );
+
+  const deleteBudget = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      const { error } = await supabase.from("budgets").delete().eq("id", id);
+      if (!error) {
+        setBudgets((prev) => prev.filter((b) => b.id !== id));
+      }
+    },
+    [user]
+  );
 
   return { budgets, addBudget, deleteBudget };
 }
 
 export function useCategories() {
-  const [custom, setCustom] = useState<{ expense: string[]; income: string[] }>({ expense: [], income: [] });
+  const [custom, setCustom] = useState<{ expense: string[]; income: string[] }>({
+    expense: [],
+    income: [],
+  });
 
   const allCategories = {
     expense: [...DEFAULT_CATEGORIES.expense, ...custom.expense],

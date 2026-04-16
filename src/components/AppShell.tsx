@@ -1,6 +1,7 @@
-import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Target, Menu, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Target, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -11,7 +12,23 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+
+  // Auth guard — redirect to login if not authenticated
+  if (!loading && !user) {
+    navigate({ to: "/login" });
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,10 +63,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Mobile toggle */}
-          <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={signOut}
+              className="hidden items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:flex"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+
+            {/* Mobile toggle */}
+            <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile nav */}
@@ -71,6 +99,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            <button
+              onClick={() => { signOut(); setOpen(false); }}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
           </nav>
         )}
       </header>
