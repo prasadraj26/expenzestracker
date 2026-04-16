@@ -31,7 +31,7 @@ export function CategoryPieChart({ transactions }: { transactions: Transaction[]
           ))}
         </Pie>
         <Tooltip
-          formatter={(value: number) => `₹${value.toLocaleString()}`}
+          formatter={(value) => `₹${Number(value).toLocaleString()}`}
           contentStyle={{ borderRadius: 8, border: "1px solid var(--border)", background: "var(--card)" }}
         />
       </PieChart>
