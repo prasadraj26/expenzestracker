@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { LayoutDashboard, ArrowLeftRight, BarChart3, Target, Menu, X, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 
 const NAV = [
@@ -15,14 +15,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   // Auth guard — redirect to login if not authenticated
-  if (!loading && !user) {
-    navigate({ to: "/login" });
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && !user) {
+      setShouldRedirect(true);
+    }
+  }, [loading, user]);
 
-  if (loading) {
+  useEffect(() => {
+    if (shouldRedirect) {
+      navigate({ to: "/login" });
+    }
+  }, [shouldRedirect, navigate]);
+
+  if (loading || shouldRedirect) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

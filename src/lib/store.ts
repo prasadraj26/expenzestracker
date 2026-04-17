@@ -1,6 +1,18 @@
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs,
+  onSnapshot
+} from "firebase/firestore";
 
 export type TransactionType = "income" | "expense";
 
@@ -30,42 +42,47 @@ export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTransactions = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("transactions")
-      .select("id, amount, type, category, description, date")
-      .order("date", { ascending: false });
-    if (data) {
-      setTransactions(
-        data.map((t) => ({
-          ...t,
-          type: t.type as TransactionType,
-          amount: Number(t.amount),
-        }))
-      );
-    }
-    setLoading(false);
-  }, [user]);
-
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    if (!user) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const q = query(
+      collection(db, "transactions"),
+      where("user_id", "==", user.uid),
+      orderBy("date", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        amount: Number(doc.data().amount)
+      })) as Transaction[];
+      setTransactions(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching transactions: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const addTransaction = useCallback(
     async (t: Omit<Transaction, "id">) => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from("transactions")
-        .insert({ ...t, user_id: user.id })
-        .select("id, amount, type, category, description, date")
-        .single();
-      if (data && !error) {
-        setTransactions((prev) => [
-          { ...data, type: data.type as TransactionType, amount: Number(data.amount) },
-          ...prev,
-        ]);
+      try {
+        await addDoc(collection(db, "transactions"), {
+          ...t,
+          user_id: user.uid,
+          created_at: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("Error adding transaction: ", error);
       }
     },
     [user]
@@ -74,11 +91,11 @@ export function useTransactions() {
   const updateTransaction = useCallback(
     async (id: string, t: Partial<Transaction>) => {
       if (!user) return;
-      const { error } = await supabase.from("transactions").update(t).eq("id", id);
-      if (!error) {
-        setTransactions((prev) =>
-          prev.map((tx) => (tx.id === id ? { ...tx, ...t } : tx))
-        );
+      try {
+        const docRef = doc(db, "transactions", id);
+        await updateDoc(docRef, t);
+      } catch (error) {
+        console.error("Error updating transaction: ", error);
       }
     },
     [user]
@@ -87,9 +104,10 @@ export function useTransactions() {
   const deleteTransaction = useCallback(
     async (id: string) => {
       if (!user) return;
-      const { error } = await supabase.from("transactions").delete().eq("id", id);
-      if (!error) {
-        setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+      try {
+        await deleteDoc(doc(db, "transactions", id));
+      } catch (error) {
+        console.error("Error deleting transaction: ", error);
       }
     },
     [user]
@@ -102,31 +120,44 @@ export function useBudgets() {
   const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
 
-  const fetchBudgets = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("budgets")
-      .select("id, category, limit, month")
-      .order("created_at", { ascending: false });
-    if (data) {
-      setBudgets(data.map((b) => ({ ...b, limit: Number(b.limit) })));
-    }
-  }, [user]);
-
   useEffect(() => {
-    fetchBudgets();
-  }, [fetchBudgets]);
+    if (!user) {
+      setBudgets([]);
+      return;
+    }
+
+    // Creating index for 'created_at' orderBy might be needed in firestore console,
+    // dropping orderBy here to avoid manual indexing steps for the user unless requested
+    const q = query(
+      collection(db, "budgets"),
+      where("user_id", "==", user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        limit: Number(doc.data().limit)
+      })) as Budget[];
+      setBudgets(data);
+    }, (error) => {
+      console.error("Error fetching budgets: ", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const addBudget = useCallback(
     async (b: Omit<Budget, "id">) => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from("budgets")
-        .insert({ ...b, user_id: user.id })
-        .select("id, category, limit, month")
-        .single();
-      if (data && !error) {
-        setBudgets((prev) => [{ ...data, limit: Number(data.limit) }, ...prev]);
+      try {
+        await addDoc(collection(db, "budgets"), {
+          ...b,
+          user_id: user.uid,
+          created_at: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("Error adding budget: ", error);
       }
     },
     [user]
@@ -135,9 +166,10 @@ export function useBudgets() {
   const deleteBudget = useCallback(
     async (id: string) => {
       if (!user) return;
-      const { error } = await supabase.from("budgets").delete().eq("id", id);
-      if (!error) {
-        setBudgets((prev) => prev.filter((b) => b.id !== id));
+      try {
+        await deleteDoc(doc(db, "budgets", id));
+      } catch (error) {
+        console.error("Error deleting budget: ", error);
       }
     },
     [user]
