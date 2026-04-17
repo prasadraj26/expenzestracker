@@ -6,19 +6,38 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+bun-debug.log*
+bun-error.log*
 
-node_modules
-dist
+# Dependencies
+node_modules/
+bun.lockb
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
 dist-ssr
+build/
+.vite/
 .output
 .vinxi
 .tanstack/**
 .nitro
-*.local
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
 
 # Editor directories and files
 .vscode/*
@@ -30,3 +49,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Coverage and test outputs
+coverage/
+*.lcov
+.nyc_output
+
+# Temporary folders
+tmp/
+temp/
+
+# Cache directories
+.cache
+.parcel-cache
+.eslintcache
