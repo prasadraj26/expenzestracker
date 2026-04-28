@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
@@ -18,6 +19,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRoute
   '/budget': typeof BudgetRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/budget': typeof BudgetRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,28 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/budget': typeof BudgetRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analytics' | '/budget' | '/login' | '/transactions'
+  fullPaths:
+    | '/'
+    | '/analytics'
+    | '/budget'
+    | '/login'
+    | '/profile'
+    | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analytics' | '/budget' | '/login' | '/transactions'
-  id: '__root__' | '/' | '/analytics' | '/budget' | '/login' | '/transactions'
+  to: '/' | '/analytics' | '/budget' | '/login' | '/profile' | '/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/analytics'
+    | '/budget'
+    | '/login'
+    | '/profile'
+    | '/transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +98,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   BudgetRoute: typeof BudgetRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   TransactionsRoute: typeof TransactionsRoute
 }
 
@@ -86,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -124,6 +154,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   BudgetRoute: BudgetRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   TransactionsRoute: TransactionsRoute,
 }
 export const routeTree = rootRouteImport

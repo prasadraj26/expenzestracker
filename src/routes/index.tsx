@@ -26,9 +26,15 @@ function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Your financial overview</p>
+        <div className="glass-card p-6 border-l-4 border-l-primary flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-foreground tracking-tight text-glow">Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-1 font-medium">Your financial overview</p>
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Today</p>
+            <p className="text-sm font-medium">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          </div>
         </div>
 
         {/* Stat cards */}
@@ -40,12 +46,12 @@ function DashboardPage() {
 
         {/* Charts row */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Monthly Overview</h2>
+          <div className="glass-card p-6 border-t-2 border-t-primary/50">
+            <h2 className="mb-6 text-base font-semibold text-foreground tracking-wide">Monthly Overview</h2>
             <MonthlyBarChart transactions={transactions} />
           </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 text-sm font-semibold text-foreground">Spending by Category</h2>
+          <div className="glass-card p-6 border-t-2 border-t-accent/50">
+            <h2 className="mb-6 text-base font-semibold text-foreground tracking-wide">Spending by Category</h2>
             <CategoryPieChart transactions={transactions} />
             <div className="mt-4">
               <CategoryLegend transactions={transactions} />
@@ -54,10 +60,10 @@ function DashboardPage() {
         </div>
 
         {/* Recent transactions */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Recent Transactions</h2>
-            <Link to="/transactions" className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+        <div className="glass-card p-6 border-t-2 border-t-secondary/50">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-base font-semibold text-foreground tracking-wide">Recent Transactions</h2>
+            <Link to="/transactions" className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors uppercase tracking-wider">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
